@@ -16,6 +16,7 @@ use crate::config;
 use crate::home::Home;
 use crate::read::Read;
 use crate::server::Server;
+use crate::signed_out::SignedOut;
 use crate::trade::Trade;
 
 pub struct Wiring {
@@ -68,8 +69,14 @@ fn guard(
 }
 
 pub async fn serve(args: &ServeArgs) -> anyhow::Result<()> {
-    let wiring = Wiring::build(&Home::locate()?)?;
-    let server = Server::new(wiring.reader, wiring.guard);
+    // A server with no session yet still starts, so a container can be signed in while it runs.
+    let server = if crate::store::session().load()?.is_none() {
+        tracing::warn!("not signed in; every tool says so until a session is saved and the server restarts");
+        Server::new(Arc::new(SignedOut), None)
+    } else {
+        let wiring = Wiring::build(&Home::locate()?)?;
+        Server::new(wiring.reader, wiring.guard)
+    };
     match args.transport {
         TransportKind::Stdio => server.run().await,
         TransportKind::Http => {
