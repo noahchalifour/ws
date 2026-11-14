@@ -1,9 +1,9 @@
-use ws_auth::{Browser, Keyring, Store};
+use ws_auth::Browser;
 
 use crate::home::Home;
 
 pub fn logout() -> anyhow::Result<()> {
-    Keyring::default().clear()?;
+    crate::store::session().clear()?;
     Browser::purge_leftovers()?;
     eprintln!(
         "Logged out. Wealthsimple may still list this login as an active session or remembered device. \

@@ -1,9 +1,9 @@
+use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::bail;
 use ws_api::Api;
-use ws_auth::{Keyring, Store};
 use ws_broker::{Broker, Reader};
 use ws_config::{Config, Mode};
 use ws_core::{Clock, SystemClock};
@@ -11,6 +11,7 @@ use ws_net::Client;
 use ws_paper::Paper;
 use ws_policy::{Guard, Kill};
 
+use crate::cli::{ServeArgs, TransportKind};
 use crate::config;
 use crate::home::Home;
 use crate::read::Read;
@@ -50,7 +51,7 @@ impl Wiring {
 }
 
 pub fn api() -> anyhow::Result<Arc<Api>> {
-    let store = Arc::new(Keyring::default());
+    let store = crate::store::session();
     let Some(session) = store.load()? else { bail!("not logged in, run `ws-mcp login` in a terminal first") };
     Ok(Arc::new(Api::new(Client::chrome()?, session, store)))
 }
@@ -66,9 +67,17 @@ fn guard(
     Ok(Arc::new(Guard::new(broker, config, journal, Kill::new(home.kill()), dir, clock)))
 }
 
-pub async fn serve() -> anyhow::Result<()> {
+pub async fn serve(args: &ServeArgs) -> anyhow::Result<()> {
     let wiring = Wiring::build(&Home::locate()?)?;
-    Server::new(wiring.reader, wiring.guard).run().await
+    let server = Server::new(wiring.reader, wiring.guard);
+    match args.transport {
+        TransportKind::Stdio => server.run().await,
+        TransportKind::Http => {
+            let addr = SocketAddr::new(args.host, args.port);
+            let allowed = args.allowed_host.clone();
+            server.run_http(addr, &args.path, &allowed).await
+        }
+    }
 }
 
 pub async fn read(action: Read) -> anyhow::Result<()> {

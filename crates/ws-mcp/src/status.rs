@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use ws_auth::{Endpoints, Keyring, Store};
+use ws_auth::Endpoints;
 use ws_net::Client;
 use ws_policy::Kill;
 
@@ -11,7 +11,7 @@ use crate::{config, resolve};
 pub async fn show() -> anyhow::Result<()> {
     let home = Home::locate()?;
     let config = config::load(&home)?;
-    let store = Keyring::default();
+    let store = crate::store::session();
     let Some(mut session) = store.load()? else {
         row("Login", "not logged in. Run `ws-mcp login`");
         row("Mode", config.mode());

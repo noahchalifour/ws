@@ -1,7 +1,11 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
+use anyhow::Context as _;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::model::{Implementation, ServerCapabilities, ServerConfig};
+use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
+use rmcp::transport::{StreamableHttpServerConfig, StreamableHttpService};
 use rmcp::{Peer, RoleServer, ServiceExt, tool_handler};
 use ws_broker::Reader;
 use ws_config::Mode;
@@ -71,6 +75,47 @@ impl Server {
         let service = self.serve(rmcp::transport::stdio()).await?;
         service.waiting().await?;
         Ok(())
+    }
+
+    /// Serves streamable HTTP at `path` until SIGTERM or Ctrl-C. Callers are not authenticated, so keep the
+    /// listener on a private network; only requests whose `Host` is in `allowed_hosts` are answered.
+    pub async fn run_http(self, addr: SocketAddr, path: &str, allowed_hosts: &[String]) -> anyhow::Result<()> {
+        let config = StreamableHttpServerConfig::default().with_allowed_hosts(allowed_hosts.iter().cloned());
+        let cancel = config.cancellation_token.clone();
+        let service =
+            StreamableHttpService::new(move || Ok(self.clone()), Arc::new(LocalSessionManager::default()), config);
+        let router = axum::Router::new().route_service(path, service);
+        let listener = tokio::net::TcpListener::bind(addr).await.with_context(|| format!("binding {addr}"))?;
+        tracing::info!("serving MCP over streamable HTTP at http://{addr}{path}");
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async move {
+                shutdown().await;
+                cancel.cancel();
+            })
+            .await?;
+        Ok(())
+    }
+}
+
+async fn shutdown() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        match signal(SignalKind::terminate()) {
+            Ok(mut term) => {
+                tokio::select! {
+                    _ = term.recv() => {}
+                    _ = tokio::signal::ctrl_c() => {}
+                }
+            }
+            Err(_) => {
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
     }
 }
 
