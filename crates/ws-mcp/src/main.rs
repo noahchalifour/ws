@@ -14,6 +14,7 @@ mod read;
 mod resolve;
 mod server;
 mod setup;
+mod signed_out;
 mod status;
 mod store;
 mod tool;

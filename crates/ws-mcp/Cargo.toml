@@ -22,6 +22,7 @@ ws-audit.workspace = true
 ws-policy.workspace = true
 
 anyhow.workspace = true
+async-trait.workspace = true
 axum.workspace = true
 clap.workspace = true
 rmcp.workspace = true
@@ -37,6 +38,5 @@ uuid.workspace = true
 [dev-dependencies]
 ws-common = { workspace = true, features = ["fixtures"] }
 ws-core = { workspace = true, features = ["fixtures"] }
-async-trait.workspace = true
 rmcp = { workspace = true, features = ["client"] }
 tower = { workspace = true, features = ["util"] }
