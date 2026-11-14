@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Login => login::run().await,
         Command::Logout => clear::logout(),
         Command::Clear => clear::run(),
-        Command::Serve(transport) => wiring::serve(&transport).await,
+        Command::Serve(args) => wiring::serve(&args).await,
         Command::Dashboard => dashboard::run().await,
         Command::Approve { ticket_id } => control::approve(&ticket_id),
         Command::Kill => control::kill(),

@@ -31,7 +31,9 @@ pub fn load(home: &Home) -> anyhow::Result<Config> {
     let path = home.config();
     let text = read(&path)?;
     let text = match std::env::var(MODE) {
-        Ok(mode) if !mode.is_empty() => Config::set(&text, &[("mode", &mode)]).with_context(|| format!("{MODE}={mode}"))?,
+        Ok(mode) if !mode.is_empty() => {
+            Config::set(&text, &[("mode", &mode)]).with_context(|| format!("{MODE}={mode}"))?
+        }
         _ => text,
     };
     Config::parse(&text).with_context(|| format!("reading {}", path.display()))

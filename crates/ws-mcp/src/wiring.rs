@@ -11,7 +11,7 @@ use ws_net::Client;
 use ws_paper::Paper;
 use ws_policy::{Guard, Kill};
 
-use crate::cli::{Transport, TransportKind};
+use crate::cli::{ServeArgs, TransportKind};
 use crate::config;
 use crate::home::Home;
 use crate::read::Read;
@@ -67,15 +67,15 @@ fn guard(
     Ok(Arc::new(Guard::new(broker, config, journal, Kill::new(home.kill()), dir, clock)))
 }
 
-pub async fn serve(transport: &Transport) -> anyhow::Result<()> {
+pub async fn serve(args: &ServeArgs) -> anyhow::Result<()> {
     let wiring = Wiring::build(&Home::locate()?)?;
     let server = Server::new(wiring.reader, wiring.guard);
-    match transport.transport {
+    match args.transport {
         TransportKind::Stdio => server.run().await,
         TransportKind::Http => {
-            let addr = SocketAddr::new(transport.host, transport.port);
-            let allowed = transport.allowed_host.clone();
-            server.run_http(addr, &transport.path, &allowed).await
+            let addr = SocketAddr::new(args.host, args.port);
+            let allowed = args.allowed_host.clone();
+            server.run_http(addr, &args.path, &allowed).await
         }
     }
 }

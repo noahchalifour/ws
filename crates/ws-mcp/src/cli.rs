@@ -33,7 +33,7 @@ pub enum Command {
     /// Remove the session, the audit log, tickets, budgets, and the paper ledger. Keeps your config.
     Clear,
     /// Run the MCP server, on stdio by default or over streamable HTTP with `--transport http`.
-    Serve(Transport),
+    Serve(ServeArgs),
     /// Open a dashboard in your browser.
     Dashboard,
     /// Approve a ticket that needs it, after showing what it would place. Asks you to confirm.
@@ -50,7 +50,7 @@ pub enum Command {
 
 impl Default for Command {
     fn default() -> Self {
-        Self::Serve(Transport::default())
+        Self::Serve(ServeArgs::default())
     }
 }
 
@@ -63,7 +63,7 @@ pub enum TransportKind {
 
 /// HTTP callers are not authenticated: serve it only on a private network.
 #[derive(Debug, Clone, Args)]
-pub struct Transport {
+pub struct ServeArgs {
     #[arg(long, value_enum, default_value_t, env = "WS_TRANSPORT")]
     pub transport: TransportKind,
     /// Address to listen on with `--transport http`.
@@ -79,7 +79,7 @@ pub struct Transport {
     pub allowed_host: Vec<String>,
 }
 
-impl Default for Transport {
+impl Default for ServeArgs {
     fn default() -> Self {
         Self {
             transport: TransportKind::Stdio,

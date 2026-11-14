@@ -11,6 +11,8 @@ if [ "${1:-}" = "login" ] && [ "${2:-}" = "--viewer" ]; then
   export DISPLAY=:99
   Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp >/dev/null 2>&1 &
   for _ in $(seq 50); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.1; done
+  # fluxbox pops up a wallpaper-setter complaint without a background set.
+  mkdir -p "$HOME/.fluxbox" && echo "background: none" > "$HOME/.fluxbox/overlay"
   fluxbox >/dev/null 2>&1 &
   x11vnc -display :99 -localhost -nopw -forever -shared -quiet >/dev/null 2>&1 &
   websockify --web /usr/share/novnc 6080 localhost:5900 >/dev/null 2>&1 &
