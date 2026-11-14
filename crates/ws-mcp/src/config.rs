@@ -24,9 +24,17 @@ pub fn set(home: &Home, changes: &[(&str, &str)]) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Overrides `mode` in the config file, for deployments that pin it, like `WS_MODE=read` in a container.
+pub const MODE: &str = "WS_MODE";
+
 pub fn load(home: &Home) -> anyhow::Result<Config> {
     let path = home.config();
-    Config::load(&path).with_context(|| format!("reading {}", path.display()))
+    let text = read(&path)?;
+    let text = match std::env::var(MODE) {
+        Ok(mode) if !mode.is_empty() => Config::set(&text, &[("mode", &mode)]).with_context(|| format!("{MODE}={mode}"))?,
+        _ => text,
+    };
+    Config::parse(&text).with_context(|| format!("reading {}", path.display()))
 }
 
 fn read(path: &Path) -> anyhow::Result<String> {

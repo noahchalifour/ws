@@ -33,6 +33,22 @@ This logs you in, picks the mode (`read`, `paper` or `trade`), and the accounts 
 
 Later, `ws-mcp logout` removes the session, and `ws-mcp clear` also removes the audit log, tickets, budgets, and the paper ledger.
 
+## Docker and HTTP
+
+`ws-mcp serve --transport http` serves MCP over streamable HTTP instead of stdio. Callers are not authenticated, so keep it on a private network; only `Host` headers listed with `--allowed-host` are answered. Every flag also reads an environment variable (`WS_TRANSPORT`, `WS_HOST`, `WS_PORT`, `WS_PATH`, `WS_ALLOWED_HOSTS`).
+
+Two more variables suit containers: `WS_SESSION_FILE` keeps the session in that file instead of the system keychain, and `WS_MODE` overrides `mode` from the config file.
+
+The image `ghcr.io/noahchalifour/ws-mcp` sets `WS_SESSION_FILE=/home/ws-mcp/session.json` and `WS_MODE=read`, and serves HTTP on port 3000 by default:
+
+```sh
+# Sign in through Chromium on a virtual display, at http://127.0.0.1:6080/vnc_lite.html
+docker run -it --rm -v ws-mcp:/home/ws-mcp -p 127.0.0.1:6080:6080 ghcr.io/noahchalifour/ws-mcp login --viewer
+# Serve
+docker run --rm -v ws-mcp:/home/ws-mcp -p 127.0.0.1:3000:3000 ghcr.io/noahchalifour/ws-mcp \
+  serve --transport=http --host=0.0.0.0 --port=3000 --allowed-host=localhost
+```
+
 ## Example
 
 Ask your agent "buy $50 of XEQT in my TFSA", or do it yourself:

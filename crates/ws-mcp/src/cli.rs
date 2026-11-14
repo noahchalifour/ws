@@ -1,4 +1,6 @@
-use clap::{Parser, Subcommand};
+use std::net::{IpAddr, Ipv4Addr};
+
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use ws_policy::TicketId;
 
@@ -30,8 +32,8 @@ pub enum Command {
     Logout,
     /// Remove the session, the audit log, tickets, budgets, and the paper ledger. Keeps your config.
     Clear,
-    /// Run the MCP server on stdio (default).
-    Serve,
+    /// Run the MCP server, on stdio by default or over streamable HTTP with `--transport http`.
+    Serve(Transport),
     /// Open a dashboard in your browser.
     Dashboard,
     /// Approve a ticket that needs it, after showing what it would place. Asks you to confirm.
@@ -44,6 +46,49 @@ pub enum Command {
     Read(Read),
     #[command(flatten)]
     Trade(Trade),
+}
+
+impl Default for Command {
+    fn default() -> Self {
+        Self::Serve(Transport::default())
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum TransportKind {
+    #[default]
+    Stdio,
+    Http,
+}
+
+/// HTTP callers are not authenticated: serve it only on a private network.
+#[derive(Debug, Clone, Args)]
+pub struct Transport {
+    #[arg(long, value_enum, default_value_t, env = "WS_TRANSPORT")]
+    pub transport: TransportKind,
+    /// Address to listen on with `--transport http`.
+    #[arg(long, default_value_t = IpAddr::V4(Ipv4Addr::LOCALHOST), env = "WS_HOST")]
+    pub host: IpAddr,
+    #[arg(long, default_value_t = 3000, env = "WS_PORT")]
+    pub port: u16,
+    /// URL path of the MCP endpoint.
+    #[arg(long, default_value = "/mcp", env = "WS_PATH")]
+    pub path: String,
+    /// `Host` header to answer, repeatable or comma-separated. Others get 403, against DNS rebinding.
+    #[arg(long, value_delimiter = ',', default_values_t = ["localhost".to_owned(), "127.0.0.1".to_owned(), "::1".to_owned()], env = "WS_ALLOWED_HOSTS")]
+    pub allowed_host: Vec<String>,
+}
+
+impl Default for Transport {
+    fn default() -> Self {
+        Self {
+            transport: TransportKind::Stdio,
+            host: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            port: 3000,
+            path: "/mcp".to_owned(),
+            allowed_host: vec!["localhost".to_owned(), "127.0.0.1".to_owned(), "::1".to_owned()],
+        }
+    }
 }
 
 #[cfg(test)]
@@ -78,5 +123,18 @@ mod tests {
         ));
         assert!(matches!(parse(&["place-order", "ticket-1"]), Some(Command::Trade(Trade::Place(_)))));
         assert!(matches!(parse(&["approve", "ticket-1"]), Some(Command::Approve { .. })));
+    }
+
+    #[test]
+    fn serves_stdio_by_default_and_http_on_request() {
+        assert!(matches!(parse(&["serve"]), Some(Command::Serve(t)) if t.transport == TransportKind::Stdio));
+        assert!(matches!(
+            parse(&["serve", "--transport=http", "--host=0.0.0.0", "--port=8080", "--allowed-host=a.svc,b.svc"]),
+            Some(Command::Serve(t)) if t.transport == TransportKind::Http
+                && t.host == IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+                && t.port == 8080
+                && t.path == "/mcp"
+                && t.allowed_host == ["a.svc", "b.svc"]
+        ));
     }
 }

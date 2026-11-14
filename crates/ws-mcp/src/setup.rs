@@ -1,5 +1,4 @@
 use anyhow::bail;
-use ws_auth::{Keyring, Store};
 use ws_config::Mode;
 use ws_core::{Account, AccountId};
 
@@ -14,7 +13,7 @@ const MODES: [(Mode, &str); 3] = [
 ];
 
 pub async fn run() -> anyhow::Result<()> {
-    if Keyring::default().load()?.is_none() {
+    if crate::store::session().load()?.is_none() {
         login::run().await?;
     }
 

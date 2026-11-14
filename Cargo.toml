@@ -24,7 +24,7 @@ ws-policy = { path = "crates/ws-policy" }
 anyhow = "1"
 async-trait = "0.1"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio"] }
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 chromiumoxide = { version = "0.9", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
@@ -32,7 +32,7 @@ percent-encoding = "2"
 chrono-tz = "0.10"
 keyring = "4"
 regex = "1"
-rmcp = { version = "3.5", features = ["server", "transport-io", "macros", "elicitation"] }
+rmcp = { version = "3.5", features = ["server", "transport-io", "transport-streamable-http-server", "macros", "elicitation"] }
 rust_decimal = { version = "1", features = ["serde-with-str", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
